@@ -41,88 +41,77 @@ collaborative-todo-app/
 By completing this practice, you will learn how to:
 1. Containerize applications using **Docker**.
 2. Deploy applications on Kubernetes using **Deployments**.
-3. Set up health checks using Kubernetes **readiness** and **liveness probes**.
+3. **Include Probes**: Add readiness and liveness probes in your deployments to monitor application health.
 4. Test communication between components inside a Kubernetes cluster.
 
 ---
 
-## **Getting Started**
+## **Task Instructions**
 
-### **1. Clone the Repository**
-```bash
-git clone <repository-url>
-cd collaborative-todo-app
-```
+### **1. Containerize the Application**
 
-### **2. Build Docker Images**
+- Write `Dockerfile` for each component (`frontend`, `backend`, `postgres`, and `redis`).
+- Build Docker images for each component.
 
-Navigate to each component's directory and build its Docker image.
+### **2. Write Kubernetes Deployments**
 
-#### Example for the Frontend:
-```bash
-cd frontend
-docker build -t frontend:latest .
-```
+- Create a **Deployment** for each component:
+  - **Frontend**: Runs the React application.
+  - **Backend**: Hosts the Flask API.
+  - **PostgreSQL**: Serves as the database.
+  - **Redis**: Provides caching functionality.
 
-Repeat for the **backend**, **postgres**, and **redis** directories.
+### **3. Include Probes in Your Deployments**
 
----
+Each deployment **must include liveness and readiness probes** to monitor the health of pods. Use the following guidelines:
+- **Frontend**:
+  - Liveness Probe: Check if the app is running by accessing `/` on port `3000`.
+  - Readiness Probe: Check if the app is ready to serve traffic by accessing `/` on port `3000`.
+- **Backend**:
+  - Liveness Probe: Monitor the `/health` endpoint on port `5000`.
+  - Readiness Probe: Verify the `/health` endpoint on port `5000` is responding.
+- **PostgreSQL**:
+  - Use the `pg_isready` command to check the database health for both probes.
+- **Redis**:
+  - Use the `redis-cli ping` command for liveness and readiness checks.
 
-### **3. Deploy to Kubernetes**
+### **4. Deploy the Application**
 
-Navigate to the `k8s/` directory and apply the Kubernetes deployment manifests.
-
-```bash
-kubectl apply -f backend-deployment.yaml
-kubectl apply -f frontend-deployment.yaml
-kubectl apply -f postgres-deployment.yaml
-kubectl apply -f redis-deployment.yaml
-```
-
----
-
-### **4. Test the Application**
-
-- Once deployed, the frontend will be accessible within your cluster.
-- Access the logs of the backend, PostgreSQL, and Redis pods to confirm they are running and communicating.
+- Use `kubectl apply` to deploy the application in your Kubernetes cluster.
+- Ensure all pods are running and healthy.
 
 ---
 
-## **Additional Notes**
+## **Testing and Validation**
 
-1. **No Services Included**:
-   - This practice omits Kubernetes **Services**. You will need to manually test pod communication.
+1. **Probes**:
+   - Simulate failures (e.g., crash a backend pod) and observe how Kubernetes restarts the pod based on the **liveness probe**.
+   - Temporarily block the backend from responding to readiness checks and confirm Kubernetes removes it from service.
 
 2. **Pod-to-Pod Communication**:
-   - Use `kubectl exec` to enter a pod and test connectivity (e.g., using `curl` or `ping`).
+   - Test connectivity between components by using `kubectl exec` to enter a pod and send test requests.
 
-   Example:
-   ```bash
-   kubectl exec -it <frontend-pod-name> -- bash
-   curl backend:5000/health
-   ```
-
-3. **Health Checks**:
-   - The frontend and backend deployments include **readiness** and **liveness** probes. Modify the delay or interval if necessary.
+3. **Logs**:
+   - Use `kubectl logs` to view logs from each pod and debug any issues.
 
 ---
 
 ## **Challenges**
 
-1. **Add Kubernetes Services**:
-   - Extend the project by adding **ClusterIP Services** to expose the backend, database, and Redis internally within the cluster.
+1. **Optimize Probes**:
+   - Adjust the `initialDelaySeconds` and `periodSeconds` for better health check performance.
 
-2. **Scale the Application**:
-   - Scale the frontend and backend deployments to handle more traffic.
+2. **Add Horizontal Pod Autoscaling (HPA)**:
+   - Extend the application to scale automatically based on CPU or memory usage.
 
-3. **Test Resilience**:
-   - Simulate failures by killing pods and observe how Kubernetes handles them.
+3. **Integrate Services**:
+   - Extend the deployment to include Kubernetes **Services** for component communication.
 
 ---
 
 ## **Resources**
 
-- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [Kubernetes Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
 - [Docker Documentation](https://docs.docker.com/)
 - [Flask Documentation](https://flask.palletsprojects.com/)
 - [React Documentation](https://reactjs.org/docs/)
