@@ -4,35 +4,41 @@ import redis
 
 app = Flask(__name__)
 
-# PostgreSQL configuration
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://admin:password@postgres:5432/tasks'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Redis configuration
 redis_client = redis.StrictRedis(host='redis', port=6379, decode_responses=True)
 
-# Task model
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
     completed = db.Column(db.Boolean, default=False)
 
-# Initialize database
 with app.app_context():
     db.create_all()
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
-    tasks = redis_client.get('tasks')
-    if tasks:
-        return jsonify(eval(tasks)), 200
+    page = int(request.args.get("page", 1))
+    search = request.args.get("search", "").lower()
+    per_page = 10
 
-    tasks = Task.query.all()
-    tasks_list = [{"id": t.id, "title": t.title, "completed": t.completed} for t in tasks]
-    redis_client.set('tasks', str(tasks_list))
-    return jsonify(tasks_list), 200
+    tasks_query = Task.query
+    if search:
+        tasks_query = tasks_query.filter(Task.title.ilike(f"%{search}%"))
+
+    tasks_paginated = tasks_query.paginate(page, per_page, False)
+    tasks = [
+        {"id": t.id, "title": t.title, "completed": t.completed}
+        for t in tasks_paginated.items
+    ]
+
+    return jsonify({
+        "tasks": tasks,
+        "hasMore": tasks_paginated.has_next
+    }), 200
 
 @app.route('/api/tasks', methods=['POST'])
 def create_task():
@@ -40,7 +46,7 @@ def create_task():
     task = Task(title=data['title'], completed=False)
     db.session.add(task)
     db.session.commit()
-    redis_client.delete('tasks')  # Invalidate cache
+    redis_client.delete('tasks')
     return jsonify({"id": task.id, "title": task.title, "completed": task.completed}), 201
 
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
@@ -51,7 +57,7 @@ def update_task(task_id):
 
     task.completed = not task.completed
     db.session.commit()
-    redis_client.delete('tasks')  # Invalidate cache
+    redis_client.delete('tasks')
     return jsonify({"id": task.id, "title": task.title, "completed": task.completed}), 200
 
 @app.route('/health', methods=['GET'])
