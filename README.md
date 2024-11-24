@@ -1,48 +1,30 @@
-# Collaborative To-Do Application
+# Collaborative To-Do Application (Advanced)
 
-This practice is designed to help you deploy a full-stack application consisting of a **frontend**, **backend**, **database (PostgreSQL)**, and **cache (Redis)** on Kubernetes. You'll use **Docker** to containerize the application and Kubernetes to orchestrate it.
+This practice builds upon the basic version of the collaborative To-Do application. You'll implement additional features and configurations to improve the robustness, scalability, and performance of the application.
 
 ---
 
 ## **Project Overview**
 
-You will deploy the following components:
+You will deploy a full-stack application consisting of the following components:
 
 1. **Frontend**: A React-based user interface.
 2. **Backend**: A Flask-based API for managing tasks.
 3. **Database**: PostgreSQL to store tasks persistently.
-4. **Cache**: Redis for caching frequently accessed tasks and managing WebSocket-like functionalities.
-
----
-
-## **Directory Structure**
-
-```
-collaborative-todo-app/
-├── frontend/              # React application
-│   ├── src/
-│   │   ├── App.js
-│   │   ├── App.css
-│   │   └── index.js
-│   └── public/
-│       ├── index.html
-├── backend/               # Flask backend application
-│   ├── requirements.txt
-│   └── app.py
-├── postgres/              # PostgreSQL database container
-├── redis/                 # Redis cache container
-└── README.md              # This file
-```
+4. **Cache**: Redis for caching frequently accessed tasks.
 
 ---
 
 ## **Objectives**
 
 By completing this practice, you will learn how to:
-1. Containerize applications using **Docker**.
-2. Deploy applications on Kubernetes using **Deployments**.
-3. **Include Probes**: Add readiness and liveness probes in your deployments to monitor application health.
-4. Test communication between components inside a Kubernetes cluster.
+
+1. **Containerize** applications using **Docker**.
+2. Deploy applications on **Kubernetes** using **Deployments**.
+3. Use **environment variables** for dynamic configuration in deployments.
+4. Add **readiness** and **liveness probes** to your Kubernetes deployments.
+5. Implement features like **pagination**, **search**, and **error handling**.
+6. Test application health and simulate failure scenarios.
 
 ---
 
@@ -50,62 +32,87 @@ By completing this practice, you will learn how to:
 
 ### **1. Containerize the Application**
 
-- Write `Dockerfile` for each component (`frontend`, `backend`, `postgres`, and `redis`).
-- Build Docker images for each component.
-
-### **2. Write Kubernetes Deployments**
-
-- Create a **Deployment** for each component:
-  - **Frontend**: Runs the React application.
-  - **Backend**: Hosts the Flask API.
-  - **PostgreSQL**: Serves as the database.
-  - **Redis**: Provides caching functionality.
-
-### **3. Include Probes in Your Deployments**
-
-Each deployment **must include liveness and readiness probes** to monitor the health of pods. Use the following guidelines:
-- **Frontend**:
-  - Liveness Probe: Check if the app is running by accessing `/` on port `3000`.
-  - Readiness Probe: Check if the app is ready to serve traffic by accessing `/` on port `3000`.
-- **Backend**:
-  - Liveness Probe: Monitor the `/health` endpoint on port `5000`.
-  - Readiness Probe: Verify the `/health` endpoint on port `5000` is responding.
-- **PostgreSQL**:
-  - Use the `pg_isready` command to check the database health for both probes.
-- **Redis**:
-  - Use the `redis-cli ping` command for liveness and readiness checks.
-
-### **4. Deploy the Application**
-
-- Use `kubectl apply` to deploy the application in your Kubernetes cluster.
-- Ensure all pods are running and healthy.
+1. Write `Dockerfile` for each component (`frontend`, `backend`, `postgres`, and `redis`).
+2. Build Docker images for each component.
+3. Ensure the application works locally using `docker-compose` (optional).
 
 ---
 
-## **Testing and Validation**
+### **2. Write Kubernetes Deployments**
 
-1. **Probes**:
-   - Simulate failures (e.g., crash a backend pod) and observe how Kubernetes restarts the pod based on the **liveness probe**.
-   - Temporarily block the backend from responding to readiness checks and confirm Kubernetes removes it from service.
+1. Create Kubernetes deployments for the following:
+   - **Frontend**: Deploy the React application.
+   - **Backend**: Deploy the Flask API.
+   - **Database**: Deploy PostgreSQL.
+   - **Cache**: Deploy Redis.
 
-2. **Pod-to-Pod Communication**:
-   - Test connectivity between components by using `kubectl exec` to enter a pod and send test requests.
+2. **Use Environment Variables**:
+   - Configure environment variables for the database and cache in the backend deployment. These should include:
+     - `POSTGRES_USER`: Database username.
+     - `POSTGRES_PASSWORD`: Database password.
+     - `POSTGRES_DB`: Database name.
+     - `REDIS_HOST`: Redis hostname.
 
-3. **Logs**:
+---
+
+### **3. Add Probes to Deployments**
+
+**Readiness and Liveness Probes** must be added to monitor the health of your pods:
+
+1. **Frontend**:
+   - **Readiness Probe**: HTTP GET request to `/` on port `3000`.
+   - **Liveness Probe**: HTTP GET request to `/` on port `3000`.
+
+2. **Backend**:
+   - **Readiness Probe**: HTTP GET request to `/health` on port `5000`.
+   - **Liveness Probe**: HTTP GET request to `/health` on port `5000`.
+
+3. **PostgreSQL**:
+   - Use the `pg_isready` command for both readiness and liveness probes.
+
+4. **Redis**:
+   - Use the `redis-cli ping` command for both readiness and liveness probes.
+
+---
+
+### **4. Add Features**
+
+1. **Frontend**:
+   - Add pagination to fetch and display tasks in chunks.
+   - Include a search bar to filter tasks by their titles.
+   - Handle API errors gracefully and display error messages to the user.
+
+2. **Backend**:
+   - Extend the `/api/tasks` endpoint to:
+     - Support pagination (`?page=1&size=10`).
+     - Allow filtering tasks by title (`?search=query`).
+
+---
+
+### **5. Test the Application**
+
+1. **Verify Probes**:
+   - Simulate failures and observe Kubernetes restarting unhealthy pods.
+   - Temporarily block a service and confirm Kubernetes removes it from traffic routing until it recovers.
+
+2. **Logs**:
    - Use `kubectl logs` to view logs from each pod and debug any issues.
+
+3. **Pod Communication**:
+   - Use `kubectl exec` to test connectivity between pods.
 
 ---
 
 ## **Challenges**
 
-1. **Optimize Probes**:
-   - Adjust the `initialDelaySeconds` and `periodSeconds` for better health check performance.
+1. **Simulate Failures**:
+   - Introduce random failures (e.g., terminate the backend process) and validate Kubernetes recovery using probes.
 
-2. **Add Horizontal Pod Autoscaling (HPA)**:
-   - Extend the application to scale automatically based on CPU or memory usage.
+2. **Optimize Probes**:
+   - Adjust the `initialDelaySeconds` and `periodSeconds` for better performance.
 
-3. **Integrate Services**:
-   - Extend the deployment to include Kubernetes **Services** for component communication.
+3. **Implement Horizontal Pod Autoscaling (HPA)**:
+   - Scale your frontend and backend deployments dynamically based on CPU or memory usage.
 
 ---
 
@@ -113,6 +120,7 @@ Each deployment **must include liveness and readiness probes** to monitor the he
 
 - [Kubernetes Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
 - [Docker Documentation](https://docs.docker.com/)
+- [Redis Documentation](https://redis.io/docs/)
 - [Flask Documentation](https://flask.palletsprojects.com/)
 - [React Documentation](https://reactjs.org/docs/)
 
